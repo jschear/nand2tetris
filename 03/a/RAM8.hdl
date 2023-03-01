@@ -15,22 +15,14 @@ CHIP RAM8 {
     OUT out[16];
 
     PARTS:
-        DMux8Way(in=true, sel=address, a=sela, b=selb, c=selc, d=seld, e=sele, f=self, g=selg, h=selh);
-        And(a=sela, b=load, out=loada);
-        And(a=selb, b=load, out=loadb);
-        And(a=selc, b=load, out=loadc);
-        And(a=seld, b=load, out=loadd);
-        And(a=sele, b=load, out=loade);
-        And(a=self, b=load, out=loadf);
-        And(a=selg, b=load, out=loadg);
-        And(a=selh, b=load, out=loadh);
-        Register(in=in, out=a, load=loada);
-        Register(in=in, out=b, load=loadb);
-        Register(in=in, out=c, load=loadc);
-        Register(in=in, out=d, load=loadd);
-        Register(in=in, out=e, load=loade);
-        Register(in=in, out=f, load=loadf);
-        Register(in=in, out=g, load=loadg);
-        Register(in=in, out=h, load=loadh);
+        DMux8Way(in=load, sel=address, a=sela, b=selb, c=selc, d=seld, e=sele, f=self, g=selg, h=selh);
+        Register(in=in, out=a, load=sela);
+        Register(in=in, out=b, load=selb);
+        Register(in=in, out=c, load=selc);
+        Register(in=in, out=d, load=seld);
+        Register(in=in, out=e, load=sele);
+        Register(in=in, out=f, load=self);
+        Register(in=in, out=g, load=selg);
+        Register(in=in, out=h, load=selh);
         Mux8Way16(a=a, b=b, c=c, d=d, e=e, f=f, g=g, h=h, sel=address, out=out);
 }
