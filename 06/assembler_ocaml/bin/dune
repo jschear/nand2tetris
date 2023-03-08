@@ -1,0 +1,4 @@
+(executable
+ (public_name assembler_ocaml)
+ (name main)
+ (libraries assembler_ocaml))
