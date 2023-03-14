@@ -36,10 +36,10 @@ type comp =
 type jmp = NULL | JGT | JEQ | JGE | JLT | JNE | JLE | JMP [@@deriving sexp]
 type value = Literal of int | Variable of string [@@deriving sexp]
 
-type instruction = Label of value | A of value | C of dest * comp * jmp
+type instruction = Label of string | A of value | C of dest * comp * jmp
 [@@deriving sexp]
 
-(* type symbol_table = (string, int, String.comparator_witness) Map.t *)
+type symbol_table = (string, int, String.comparator_witness) Map.t
 
 let binstr_of_bool = function true -> "1" | false -> "0"
 
@@ -173,9 +173,7 @@ let parse_label line =
   let trimmed =
     String.strip ~drop:(fun char -> Char.(char = '(' || char = ')')) line
   in
-  match int_of_string_opt trimmed with
-  | Some x -> Label (Literal x)
-  | None -> Label (Variable trimmed)
+  Label trimmed
 
 let parse_a_instruction line =
   let trimmed = String.strip ~drop:(fun char -> Char.(char = '@')) line in
@@ -197,16 +195,80 @@ let parse (assembly : string list) : instruction list =
       let trimmed = trim_comment line |> String.strip in
       match trimmed with "" -> None | x -> Some (parse_line x))
 
-(* let first_pass (program : instruction list) : instruction list * symbol_table =
-     assert false
+let constant_symbol_alist =
+  [
+    ("R0", 0);
+    ("R1", 1);
+    ("R2", 2);
+    ("R3", 3);
+    ("R4", 4);
+    ("R5", 5);
+    ("R6", 6);
+    ("R7", 7);
+    ("R8", 8);
+    ("R9", 9);
+    ("R10", 10);
+    ("R11", 11);
+    ("R12", 12);
+    ("R13", 13);
+    ("R14", 14);
+    ("R15", 15);
+    ("SCREEN", 16384);
+    ("KBD", 24576);
+    ("SP", 0);
+    ("LCL", 1);
+    ("ARG", 2);
+    ("THIS", 3);
+    ("THAT", 4);
+  ]
 
-   let second_pass (program, symbols) = assert false *)
+let first_pass (program : instruction list) : instruction list * symbol_table =
+  let symbol_table = Map.of_alist_exn (module String) constant_symbol_alist in
+
+  let _, symbols_with_labels =
+    List.fold program ~init:(0, symbol_table)
+      ~f:(fun (line_number, symbols) instr ->
+        let new_line_number =
+          match instr with
+          | A _ | C _ -> line_number + 1
+          | Label _ -> line_number
+        in
+        let new_symbols =
+          match instr with
+          | A _ | C _ -> symbols
+          | Label new_symbol ->
+              Map.add_exn symbols ~key:new_symbol ~data:new_line_number
+        in
+        (new_line_number, new_symbols))
+  in
+
+  let program_without_labels =
+    List.filter program ~f:(fun instr ->
+        match instr with Label _ -> false | _ -> true)
+  in
+  (program_without_labels, symbols_with_labels)
+
+let second_pass (program, symbols) : instruction list =
+  let _, instructions =
+    List.fold_map program ~init:(16, symbols)
+      ~f:(fun (next_idx, symbols) instr ->
+        match instr with
+        | C _ -> ((next_idx, symbols), instr)
+        | Label _ -> ((next_idx, symbols), instr)
+        | A (Literal _) -> ((next_idx, symbols), instr)
+        | A (Variable variable) -> (
+            match Map.find symbols variable with
+            | Some value -> ((next_idx, symbols), A (Literal value))
+            | None ->
+                let new_symbols =
+                  Map.add_exn symbols ~key:variable ~data:next_idx
+                in
+                ((next_idx + 1, new_symbols), A (Literal next_idx))))
+  in
+  instructions
 
 let compile (assembly : string list) : instruction list =
-  let program = parse assembly in
-  (* List.iter program ~f:(fun line ->
-      print_endline (Sexp.to_string (sexp_of_instruction line))); *)
-  program
+  parse assembly |> first_pass |> second_pass
 
 let write filename program =
   let data =
