@@ -1,4 +1,12 @@
 (executable
  (public_name assembler_ocaml)
  (name main)
- (libraries assembler_ocaml))
+ (libraries
+  assembler_ocaml
+  core
+  stdio
+  core_unix.command_unix
+  pp-binary-ints
+  str)
+ (preprocess
+  (pps ppx_jane ppx_inline_test)))
