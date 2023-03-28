@@ -7,6 +7,7 @@
   stdio
   core_unix.command_unix
   pp-binary-ints
-  str)
+  str
+  unix)
  (preprocess
   (pps ppx_jane ppx_inline_test)))
