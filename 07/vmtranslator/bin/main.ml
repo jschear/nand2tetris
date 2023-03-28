@@ -37,7 +37,7 @@ let parse (bytecode : string list) : Vm.Expr.t list =
       let trimmed = trim_comment line |> String.strip in
       match trimmed with "" -> None | x -> Some (parse_line x))
 
-let asm_of_bytecode idx filename expr =
+let asm_of_bytecode idx classname expr =
   let comment = Asm.Expr.Comment (Vm.Expr.to_string expr) in
   let asm =
     match expr with
@@ -53,8 +53,8 @@ let asm_of_bytecode idx filename expr =
     | Vm.Expr.Pop ((This as segment), value)
     | Vm.Expr.Pop ((That as segment), value) ->
         Asmgen.pop_segment segment value
-    | Vm.Expr.Push (Static, value) -> Asmgen.push_static filename value
-    | Vm.Expr.Pop (Static, value) -> Asmgen.pop_static filename value
+    | Vm.Expr.Push (Static, value) -> Asmgen.push_static classname value
+    | Vm.Expr.Pop (Static, value) -> Asmgen.pop_static classname value
     | Vm.Expr.Push (Pointer, value) -> Asmgen.push_pointer value
     | Vm.Expr.Pop (Pointer, value) -> Asmgen.pop_pointer value
     | Vm.Expr.Push (Temp, value) -> Asmgen.push_temp value
@@ -69,9 +69,9 @@ let asm_of_bytecode idx filename expr =
   in
   comment :: asm
 
-let translate filename bytecode : Asm.Expr.t list =
+let translate classname bytecode : Asm.Expr.t list =
   List.concat_mapi bytecode ~f:(fun idx bytecode ->
-      asm_of_bytecode idx filename bytecode)
+      asm_of_bytecode idx classname bytecode)
 
 let write filename program =
   List.map program ~f:Asm.Expr.to_string |> String.concat ~sep:"\n"
@@ -81,7 +81,8 @@ let read_lines filename =
   In_channel.with_file filename ~f:In_channel.input_lines
 
 let translate_to_file filename output =
-  read_lines filename |> parse |> translate filename |> write output
+  let classname = Filename.chop_extension (Filename.basename filename) in
+  read_lines filename |> parse |> translate classname |> write output
 
 let command =
   Command.basic ~summary:"Translate Hack VM code to Hack assembly."

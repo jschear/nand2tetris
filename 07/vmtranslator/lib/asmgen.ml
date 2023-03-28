@@ -83,13 +83,13 @@ let pop_segment segment value = calculate_addr segment value @ pop_to_addr
 let static_variable_for filename value =
   Asm.Value.Variable (Printf.sprintf "%s.%i" filename value)
 
-let push_static filename value =
-  (* @filename.i *)
-  A (static_variable_for filename value) :: push_from_addr
+let push_static classname value =
+  (* @classname.i *)
+  A (static_variable_for classname value) :: push_from_addr
 
-let pop_static filename value =
-  (* @filename.i *)
-  A (static_variable_for filename value) :: pop_to_addr
+let pop_static classname value =
+  (* @classname.i *)
+  A (static_variable_for classname value) :: pop_to_addr
 
 let push_temp value =
   [
