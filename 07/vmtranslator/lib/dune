@@ -1,2 +1,5 @@
 (library
- (name vmtranslator))
+ (name vmtranslator)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))
