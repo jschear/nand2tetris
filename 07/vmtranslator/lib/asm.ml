@@ -116,7 +116,7 @@ module Expr = struct
 
   let to_string = function
     | Label x -> Printf.sprintf "(%s)" x
-    | A x -> Value.to_string x
+    | A x -> "@" ^ Value.to_string x
     | C (dest, comp, jmp) ->
         Printf.sprintf "%s%s%s" (Dest.to_string dest) (Comp.to_string comp)
           (Jmp.to_string jmp)

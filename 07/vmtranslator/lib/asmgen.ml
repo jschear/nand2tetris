@@ -142,8 +142,8 @@ let sub =
   pop_to_d_register
   @ [ (* A=A-1 *) C (a, A_minus_one, NULL); (* M=M-D *) C (m, M_minus_D, NULL) ]
 
-let neg = [ A sp; C (a, A_minus_one, NULL); C (m, Neg_M, NULL) ]
-let not = [ A sp; C (a, A_minus_one, NULL); C (m, Not_M, NULL) ]
+let neg = [ A sp; C (a, M_minus_one, NULL); C (m, Neg_M, NULL) ]
+let not = [ A sp; C (a, M_minus_one, NULL); C (m, Not_M, NULL) ]
 
 let and_op =
   pop_to_d_register
@@ -159,8 +159,8 @@ let boolean_op expr idx =
   let jmp =
     match expr with
     | Vm.Expr.Eq -> Asm.Jmp.JEQ
-    | Vm.Expr.Gt -> Asm.Jmp.JGT
-    | Vm.Expr.Lt -> Asm.Jmp.JLT
+    | Vm.Expr.Gt -> Asm.Jmp.JLT
+    | Vm.Expr.Lt -> Asm.Jmp.JGT
     | _ -> failwith "invalid boolean op"
   in
   pop_to_d_register
