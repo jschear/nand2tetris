@@ -38,14 +38,14 @@ let push_constant value =
 (* addr ← LCL + i *)
 let calculate_addr segment value =
   [
-    (* @i *)
-    A (Literal value);
-    (* D=A *)
-    C (d, A, NULL);
     (* @LCL *)
     A (Variable (Vm.Segment.variable_for segment));
-    (* A=D+M *)
-    C (a, D_plus_M, NULL);
+    (* D=M *)
+    C (d, M, NULL);
+    (* @i *)
+    A (Literal value);
+    (* A=D+A *)
+    C (a, D_plus_A, NULL);
   ]
 
 (* RAM[SP] ← RAM[addr]; SP++ *)
@@ -112,7 +112,8 @@ let pop_temp value =
     C (d, A, NULL);
     (* @i *)
     A (Literal value);
-    (* D=D+A *)
+    (* A=D+A *)
+    C (a, D_plus_A, NULL);
   ]
   @ pop_to_addr
 
