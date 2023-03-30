@@ -48,6 +48,12 @@ module Expr = struct
     | And
     | Or
     | Not
+    | Goto of string
+    | IfGoto of string
+    | Label of string
+    | Call of string * int
+    | Function of string * int
+    | Return
   [@@deriving sexp]
 
   let to_string = function
@@ -64,4 +70,10 @@ module Expr = struct
     | And -> "and"
     | Or -> "or"
     | Not -> "not"
+    | Goto label -> sprintf "goto %s" label
+    | IfGoto label -> sprintf "if-goto %s" label
+    | Label label -> sprintf "label %s" label
+    | Call (name, n_args) -> sprintf "call %s %d" name n_args
+    | Function (name, n_locals) -> sprintf "function %s %d" name n_locals
+    | Return -> "return"
 end

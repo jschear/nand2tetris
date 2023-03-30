@@ -38,7 +38,7 @@ let push_constant value =
 (* addr ← LCL + i *)
 let calculate_addr segment value =
   [
-    (* @LCL *)
+    (* @LCL etc. *)
     A (Variable (Vm.Segment.variable_for segment));
     (* D=M *)
     C (d, M, NULL);
@@ -195,3 +195,12 @@ let boolean_op expr idx =
       (* (END_x) *)
       Label end_label;
     ]
+
+let label label = [ Label (Printf.sprintf "LABEL_%s" label) ]
+
+let goto label =
+  [ A (Variable (Printf.sprintf "LABEL_%s" label)); C (none, Zero, JMP) ]
+
+let if_goto label =
+  pop_to_d_register
+  @ [ A (Variable (Printf.sprintf "LABEL_%s" label)); C (none, D, JNE) ]

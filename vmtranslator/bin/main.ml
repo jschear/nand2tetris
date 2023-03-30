@@ -15,7 +15,8 @@ let construct_segment_value line ~constr =
   constr segment value
 
 let parse_line line =
-  let first = String.split line ~on:' ' |> List.hd_exn in
+  let split_line = String.split line ~on:' ' in
+  let first = List.hd_exn split_line in
   match first with
   | "push" ->
       construct_segment_value line ~constr:(fun x y -> Vm.Expr.Push (x, y))
@@ -30,6 +31,9 @@ let parse_line line =
   | "and" -> Vm.Expr.And
   | "or" -> Vm.Expr.Or
   | "not" -> Vm.Expr.Not
+  | "label" -> Vm.Expr.Label (List.nth_exn split_line 1)
+  | "goto" -> Vm.Expr.Goto (List.nth_exn split_line 1)
+  | "if-goto" -> Vm.Expr.IfGoto (List.nth_exn split_line 1)
   | _ -> raise (Failure "Not implemented")
 
 let parse (bytecode : string list) : Vm.Expr.t list =
@@ -43,22 +47,14 @@ let asm_of_bytecode idx classname expr =
     match expr with
     | Vm.Expr.Push (Constant, value) -> Asmgen.push_constant value
     | Vm.Expr.Pop (Constant, _) -> failwith "Cannot pop to constant segment"
-    | Vm.Expr.Push ((Local as segment), value)
-    | Vm.Expr.Push ((Argument as segment), value)
-    | Vm.Expr.Push ((This as segment), value)
-    | Vm.Expr.Push ((That as segment), value) ->
-        Asmgen.push_segment segment value
-    | Vm.Expr.Pop ((Local as segment), value)
-    | Vm.Expr.Pop ((Argument as segment), value)
-    | Vm.Expr.Pop ((This as segment), value)
-    | Vm.Expr.Pop ((That as segment), value) ->
-        Asmgen.pop_segment segment value
     | Vm.Expr.Push (Static, value) -> Asmgen.push_static classname value
     | Vm.Expr.Pop (Static, value) -> Asmgen.pop_static classname value
     | Vm.Expr.Push (Pointer, value) -> Asmgen.push_pointer value
     | Vm.Expr.Pop (Pointer, value) -> Asmgen.pop_pointer value
     | Vm.Expr.Push (Temp, value) -> Asmgen.push_temp value
     | Vm.Expr.Pop (Temp, value) -> Asmgen.pop_temp value
+    | Vm.Expr.Push (segment, value) -> Asmgen.push_segment segment value
+    | Vm.Expr.Pop (segment, value) -> Asmgen.pop_segment segment value
     | Vm.Expr.Add -> Asmgen.add
     | Vm.Expr.Sub -> Asmgen.sub
     | Vm.Expr.Neg -> Asmgen.neg
@@ -66,6 +62,10 @@ let asm_of_bytecode idx classname expr =
     | Vm.Expr.And -> Asmgen.and_op
     | Vm.Expr.Or -> Asmgen.or_op
     | Vm.Expr.Not -> Asmgen.not
+    | Vm.Expr.Label label -> Asmgen.label label
+    | Vm.Expr.Goto label -> Asmgen.goto label
+    | Vm.Expr.IfGoto label -> Asmgen.if_goto label
+    | _ -> failwith "Not implemented"
   in
   comment :: asm
 
