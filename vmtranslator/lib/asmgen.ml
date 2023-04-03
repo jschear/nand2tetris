@@ -217,10 +217,14 @@ let fn name num_locals =
           @ [
               (* @SP *)
               A sp;
-              (* A=M+1 *)
-              C (a, M_plus_one, NULL);
+              (* A=M *)
+              C (a, M, NULL);
               (* M=0 *)
               C (m, Zero, NULL);
+              (* @SP *)
+              A sp;
+              (* M=M+1 *)
+              C (m, M_plus_one, NULL);
             ])
           (n - 1)
   in
@@ -235,8 +239,24 @@ let push_segment_pointer segment =
   ]
   @ push_from_d_register
 
-let call name num_args classname idx =
-  let return_label = Printf.sprintf "%s$ret.%i" classname idx in
+let restore_segment_pointer segment =
+  [
+    (* @R14 *)
+    A (Variable "R14");
+    (* AM=M-1 *)
+    C (am, M_minus_one, NULL);
+    (* D=M *)
+    C (d, M, NULL);
+    (* @segment *)
+    A (Variable (Vm.Segment.variable_for segment));
+    (* M=D *)
+    C (m, D, NULL);
+  ]
+
+let call function_name num_args caller_classname idx =
+  (* Note: instead of keeping a counter of returns per classname, we're using the (vm code) line number to uniquely identify this function call. *)
+  (* TODO reimplement this as described in the textbook? *)
+  let return_label = Printf.sprintf "%s$ret.%i" caller_classname idx in
   [ (* @returnAddress *) A (Variable return_label); (* D=A *) C (d, A, NULL) ]
   @ push_from_d_register
   @ push_segment_pointer Vm.Segment.Local
@@ -269,29 +289,42 @@ let call name num_args classname idx =
       (* M=D *)
       C (m, D, NULL);
       (* @function *)
-      A (Variable (function_label name));
+      A (Variable (function_label function_name));
       (* 0;JMP *)
       C (none, Zero, JMP);
       (* (returnAddress) *)
       Label return_label;
     ]
 
-let restore_segment_pointer segment =
+let return =
   [
-    (* @R14 *)
-    A (Variable "R14");
-    (* AM=M-1 *)
-    C (am, M_minus_one, NULL);
+    (* endFrame/R14 = LCL *)
+    (* @LCL *)
+    A (Variable (Vm.Segment.variable_for Vm.Segment.Local));
     (* D=M *)
     C (d, M, NULL);
-    (* @segment *)
-    A (Variable (Vm.Segment.variable_for segment));
+    (* @R14 *)
+    A (Variable "R14");
+    (* M=D *)
+    C (m, D, NULL);
+    (* retAddr/R15 = *(endFrame – 5)  *)
+    (* @5 *)
+    A (Literal 5);
+    (* D=A *)
+    C (d, A, NULL);
+    (* @R14 *)
+    A (Variable "R14");
+    (* A=M-D *)
+    C (a, M_minus_D, NULL);
+    (* D=M *)
+    C (d, M, NULL);
+    (* @R15 *)
+    A (Variable "R15");
     (* M=D *)
     C (m, D, NULL);
   ]
-
-let return =
-  pop_to_d_register
+  (* *ARG = pop() *)
+  @ pop_to_d_register
   @ [
       (* @ARG *)
       A (Variable (Vm.Segment.variable_for Vm.Segment.Argument));
@@ -299,6 +332,7 @@ let return =
       C (a, M, NULL);
       (* M=D *)
       C (m, D, NULL);
+      (* SP = ARG + 1 *)
       (* @ARG *)
       A (Variable (Vm.Segment.variable_for Vm.Segment.Argument));
       (* D=M *)
@@ -307,26 +341,29 @@ let return =
       A sp;
       (* M=D+1 *)
       C (m, D_plus_one, NULL);
-      (* @LCL *)
-      A (Variable (Vm.Segment.variable_for Vm.Segment.Local));
-      (* D=M *)
-      C (d, M, NULL);
-      (* @R14 *)
-      A (Variable "R14");
-      (* M=D *)
-      C (m, D, NULL);
     ]
   @ restore_segment_pointer Vm.Segment.That
   @ restore_segment_pointer Vm.Segment.This
   @ restore_segment_pointer Vm.Segment.Argument
   @ restore_segment_pointer Vm.Segment.Local
   @ [
-      (* @R14 *)
-      A (Variable "R14");
-      (* A=M-1 *)
-      C (a, M_minus_one, NULL);
+      (* @R15 *)
+      A (Variable "R15");
       (* A=M *)
       C (a, M, NULL);
       (* 0;JMP *)
       C (none, Zero, JMP);
     ]
+
+let init =
+  [
+    (* @256 *)
+    A (Literal 256);
+    (* D=A *)
+    C (d, A, NULL);
+    (* @SP *)
+    A sp;
+    (* M=D *)
+    C (m, D, NULL);
+  ]
+  @ call "Sys.init" 0 "bootstrap" 0

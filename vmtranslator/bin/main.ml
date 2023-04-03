@@ -84,21 +84,52 @@ let translate classname bytecode : Asm.Expr.t list =
   List.concat_mapi bytecode ~f:(fun idx bytecode ->
       asm_of_bytecode idx classname bytecode)
 
-let write filename program =
-  List.map program ~f:Asm.Expr.to_string |> String.concat ~sep:"\n"
-  |> fun data -> Out_channel.write_all filename ~data
+let append_asm oc program =
+  let lines = List.map program ~f:Asm.Expr.to_string in
+  Out_channel.output_lines oc lines
 
 let read_lines filename =
   In_channel.with_file filename ~f:In_channel.input_lines
 
-let translate_to_file filename output =
-  let classname = Filename.chop_extension (Filename.basename filename) in
-  read_lines filename |> parse |> translate classname |> write output
+let translate_to_file filename_or_directory =
+  let is_directory = Sys_unix.is_directory filename_or_directory in
+  let input_files, output_filename =
+    match is_directory with
+    | `Yes ->
+        let files =
+          Sys_unix.readdir filename_or_directory
+          |> Array.to_list
+          |> List.filter ~f:(fun filename ->
+                 String.is_suffix filename ~suffix:".vm")
+          |> List.map ~f:(fun filename ->
+                 filename_or_directory ^ "/" ^ filename)
+        in
+        ( files,
+          filename_or_directory ^ "/"
+          ^ Filename.basename filename_or_directory
+          ^ ".asm" )
+    | `No | `Unknown ->
+        ( [ filename_or_directory ],
+          Filename.chop_suffix filename_or_directory ".vm" ^ ".asm" )
+  in
+  Out_channel.with_file output_filename ~f:(fun oc ->
+      let () =
+        match is_directory with
+        | `Yes -> append_asm oc Asmgen.init
+        | `No | `Unknown -> ()
+      in
+      List.iter input_files ~f:(fun filename ->
+          let classname =
+            Filename.chop_suffix (Filename.basename filename) ".vm"
+          in
+          let asm = read_lines filename |> parse |> translate classname in
+          append_asm oc asm))
 
 let command =
   Command.basic ~summary:"Translate Hack VM code to Hack assembly."
-    (let%map_open.Command filename = anon ("filename" %: string)
-     and output = anon ("output" %: string) in
-     fun () -> translate_to_file filename output)
+    (let%map_open.Command filename_or_directory =
+       anon ("filename_or_directory" %: string)
+     in
+     fun () -> translate_to_file filename_or_directory)
 
 let () = Command_unix.run ~version:"1.0" command
