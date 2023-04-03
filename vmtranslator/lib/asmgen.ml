@@ -204,3 +204,129 @@ let goto label =
 let if_goto label =
   pop_to_d_register
   @ [ A (Variable (Printf.sprintf "LABEL_%s" label)); C (none, D, JNE) ]
+
+let function_label name = Printf.sprintf "FUNCTION_%s" name
+
+let fn name num_locals =
+  let label = function_label name in
+  let rec zero_locals acc = function
+    | 0 -> acc
+    | n ->
+        zero_locals
+          (acc
+          @ [
+              (* @SP *)
+              A sp;
+              (* A=M+1 *)
+              C (a, M_plus_one, NULL);
+              (* M=0 *)
+              C (m, Zero, NULL);
+            ])
+          (n - 1)
+  in
+  Label label :: zero_locals [] num_locals
+
+let push_segment_pointer segment =
+  [
+    (* @segment *)
+    A (Variable (Vm.Segment.variable_for segment));
+    (* D=M *)
+    C (d, M, NULL);
+  ]
+  @ push_from_d_register
+
+let call name num_args classname idx =
+  let return_label = Printf.sprintf "%s$ret.%i" classname idx in
+  [ (* @returnAddress *) A (Variable return_label); (* D=A *) C (d, A, NULL) ]
+  @ push_from_d_register
+  @ push_segment_pointer Vm.Segment.Local
+  @ push_segment_pointer Vm.Segment.Argument
+  @ push_segment_pointer Vm.Segment.This
+  @ push_segment_pointer Vm.Segment.That
+  @ [
+      (* ARG = SP - 5 - nArgs *)
+      A sp;
+      (* D=M *)
+      C (d, M, NULL);
+      (* @5 *)
+      A (Literal 5);
+      (* D=D-A *)
+      C (d, D_minus_A, NULL);
+      (* @nArgs *)
+      A (Literal num_args);
+      (* D=D-A *)
+      C (d, D_minus_A, NULL);
+      (* @ARG *)
+      A (Variable (Vm.Segment.variable_for Vm.Segment.Argument));
+      (* M=D *)
+      C (m, D, NULL);
+      (* @SP *)
+      A sp;
+      (* D=M *)
+      C (d, M, NULL);
+      (* @LCL *)
+      A (Variable (Vm.Segment.variable_for Vm.Segment.Local));
+      (* M=D *)
+      C (m, D, NULL);
+      (* @function *)
+      A (Variable (function_label name));
+      (* 0;JMP *)
+      C (none, Zero, JMP);
+      (* (returnAddress) *)
+      Label return_label;
+    ]
+
+let restore_segment_pointer segment =
+  [
+    (* @R14 *)
+    A (Variable "R14");
+    (* AM=M-1 *)
+    C (am, M_minus_one, NULL);
+    (* D=M *)
+    C (d, M, NULL);
+    (* @segment *)
+    A (Variable (Vm.Segment.variable_for segment));
+    (* M=D *)
+    C (m, D, NULL);
+  ]
+
+let return =
+  pop_to_d_register
+  @ [
+      (* @ARG *)
+      A (Variable (Vm.Segment.variable_for Vm.Segment.Argument));
+      (* A=M *)
+      C (a, M, NULL);
+      (* M=D *)
+      C (m, D, NULL);
+      (* @ARG *)
+      A (Variable (Vm.Segment.variable_for Vm.Segment.Argument));
+      (* D=M *)
+      C (d, M, NULL);
+      (* @SP *)
+      A sp;
+      (* M=D+1 *)
+      C (m, D_plus_one, NULL);
+      (* @LCL *)
+      A (Variable (Vm.Segment.variable_for Vm.Segment.Local));
+      (* D=M *)
+      C (d, M, NULL);
+      (* @R14 *)
+      A (Variable "R14");
+      (* M=D *)
+      C (m, D, NULL);
+    ]
+  @ restore_segment_pointer Vm.Segment.That
+  @ restore_segment_pointer Vm.Segment.This
+  @ restore_segment_pointer Vm.Segment.Argument
+  @ restore_segment_pointer Vm.Segment.Local
+  @ [
+      (* @R14 *)
+      A (Variable "R14");
+      (* A=M-1 *)
+      C (a, M_minus_one, NULL);
+      (* A=M *)
+      C (a, M, NULL);
+      (* 0;JMP *)
+      C (none, Zero, JMP);
+    ]

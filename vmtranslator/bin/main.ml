@@ -34,9 +34,18 @@ let parse_line line =
   | "label" -> Vm.Expr.Label (List.nth_exn split_line 1)
   | "goto" -> Vm.Expr.Goto (List.nth_exn split_line 1)
   | "if-goto" -> Vm.Expr.IfGoto (List.nth_exn split_line 1)
+  | "function" ->
+      let name = List.nth_exn split_line 1 in
+      let num_vars = List.nth_exn split_line 2 |> Int.of_string in
+      Vm.Expr.Function (name, num_vars)
+  | "call" ->
+      let name = List.nth_exn split_line 1 in
+      let num_args = List.nth_exn split_line 2 |> Int.of_string in
+      Vm.Expr.Call (name, num_args)
+  | "return" -> Vm.Expr.Return
   | _ -> raise (Failure "Not implemented")
 
-let parse (bytecode : string list) : Vm.Expr.t list =
+let parse bytecode : Vm.Expr.t list =
   List.filter_map bytecode ~f:(fun line ->
       let trimmed = trim_comment line |> String.strip in
       match trimmed with "" -> None | x -> Some (parse_line x))
@@ -65,7 +74,9 @@ let asm_of_bytecode idx classname expr =
     | Vm.Expr.Label label -> Asmgen.label label
     | Vm.Expr.Goto label -> Asmgen.goto label
     | Vm.Expr.IfGoto label -> Asmgen.if_goto label
-    | _ -> failwith "Not implemented"
+    | Vm.Expr.Function (name, num_vars) -> Asmgen.fn name num_vars
+    | Vm.Expr.Call (name, num_args) -> Asmgen.call name num_args classname idx
+    | Vm.Expr.Return -> Asmgen.return
   in
   comment :: asm
 
