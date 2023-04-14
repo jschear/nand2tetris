@@ -1,0 +1,6 @@
+(executable
+ (public_name compiler)
+ (name main)
+ (libraries compiler core stdio core_unix.command_unix str)
+ (preprocess
+  (pps ppx_jane ppx_inline_test)))
