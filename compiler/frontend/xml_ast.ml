@@ -38,8 +38,8 @@ end
 
 module XmlableClassVars : Xmlable with type t := ClassVar.t list = struct
   let write (t : ClassVar.t list) oc =
-    fprintf oc "<classVarDec>\n";
     List.iter t ~f:(fun class_var ->
+        fprintf oc "<classVarDec>\n";
         let kind =
           match class_var.kind with
           | ClassVar.Field -> "field"
@@ -48,8 +48,8 @@ module XmlableClassVars : Xmlable with type t := ClassVar.t list = struct
         fprintf oc "<keyword> %s </keyword>\n" kind;
         XmlableType.write class_var.typ oc;
         XmlableIdentifierList.write class_var.names oc;
-        fprintf oc "<symbol> ; </symbol>\n");
-    fprintf oc "</classVarDec>\n"
+        fprintf oc "<symbol> ; </symbol>\n";
+        fprintf oc "</classVarDec>\n")
 end
 
 module XmlableParameterList :
