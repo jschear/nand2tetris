@@ -1,0 +1,11 @@
+(library
+ (name frontend)
+ (libraries core)
+ (modules parser lexer ast token_utils xml_ast)
+ (preprocess
+  (pps ppx_jane)))
+
+(menhir
+ (modules parser))
+
+(ocamllex lexer)

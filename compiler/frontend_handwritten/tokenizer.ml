@@ -1,5 +1,5 @@
 open Core
-open Jacklang
+open Tokens
 
 (* This is for fun/learning. Use ocamllex! *)
 

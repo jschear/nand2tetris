@@ -1,6 +1,12 @@
 (executable
  (public_name compiler)
  (name main)
- (libraries compiler core stdio core_unix.command_unix str)
+ (libraries
+  frontend
+  core
+  stdio
+  core_unix.command_unix
+  str
+  frontend_handwritten)
  (preprocess
   (pps ppx_jane ppx_inline_test)))
