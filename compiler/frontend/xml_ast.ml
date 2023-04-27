@@ -71,13 +71,7 @@ module XmlableParameterList :
     fprintf oc "</parameterList>\n"
 end
 
-module type XmlableTerm = Xmlable with type t := Term.t
-module type XmlableExpression = Xmlable with type t := Expression.t
-module type XmlableStatement = Xmlable with type t := Statement.t
-module type XmlableStatements = Xmlable with type t := Statement.t list
-module type XmlableSubroutineCall = Xmlable with type t := Term.subroutine_call
-
-module MakeXmlableTerm (E : XmlableExpression) : XmlableTerm = struct
+module rec XmlableTerm : (Xmlable with type t := Term.t) = struct
   let rec write (t : Term.t) oc =
     fprintf oc "<term>\n";
 
@@ -101,21 +95,11 @@ module MakeXmlableTerm (E : XmlableExpression) : XmlableTerm = struct
             fprintf oc "<symbol> . </symbol>\n");
         XmlableIdentifier.write subroutine_name oc;
         fprintf oc "<symbol> ( </symbol>\n";
-        fprintf oc "<expressionList>\n";
-        let rec write_arguments = function
-          | [] -> ()
-          | [ expr ] -> E.write expr oc
-          | expr :: arguments ->
-              E.write expr oc;
-              fprintf oc "<symbol> , </symbol>\n";
-              write_arguments arguments
-        in
-        write_arguments arguments;
-        fprintf oc "</expressionList>\n";
+        XmlableExpressionList.write arguments oc;
         fprintf oc "<symbol> ) </symbol>\n"
     | Term.Parenthesized expr ->
         fprintf oc "<symbol> ( </symbol>\n";
-        E.write expr oc;
+        XmlableExpression.write expr oc;
         fprintf oc "<symbol> ) </symbol>\n"
     | Term.UnaryOp { op; term } ->
         (match op with
@@ -125,16 +109,16 @@ module MakeXmlableTerm (E : XmlableExpression) : XmlableTerm = struct
     | Term.ArrayAccess { name; index } ->
         XmlableIdentifier.write name oc;
         fprintf oc "<symbol> [ </symbol>\n";
-        E.write index oc;
+        XmlableExpression.write index oc;
         fprintf oc "<symbol> ] </symbol>\n");
 
     fprintf oc "</term>\n"
 end
 
-module MakeXmlableExpression (T : XmlableTerm) : XmlableExpression = struct
+and XmlableExpression : (Xmlable with type t := Expression.t) = struct
   let write (t : Expression.t) oc =
     fprintf oc "<expression>\n";
-    T.write t.term oc;
+    XmlableTerm.write t.term oc;
     List.iter t.op_terms ~f:(fun (op, term) ->
         (match op with
         | Term.Plus -> fprintf oc "<symbol> + </symbol>\n"
@@ -146,19 +130,19 @@ module MakeXmlableExpression (T : XmlableTerm) : XmlableExpression = struct
         | Term.Lt -> fprintf oc "<symbol> &lt; </symbol>\n"
         | Term.Gt -> fprintf oc "<symbol> &gt; </symbol>\n"
         | Term.Eq -> fprintf oc "<symbol> = </symbol>\n");
-        T.write term oc);
+        XmlableTerm.write term oc);
     fprintf oc "</expression>\n"
 end
 
-module MakeXmlableStatements (S : XmlableStatement) : XmlableStatements = struct
+and XmlableStatements : (Xmlable with type t := Statement.t list) = struct
   let write (t : Statement.t list) oc =
     fprintf oc "<statements>\n";
-    List.iter t ~f:(fun statement -> S.write statement oc);
+    List.iter t ~f:(fun statement -> XmlableStatement.write statement oc);
     fprintf oc "</statements>\n"
 end
 
-module MakeXmlableSubroutineCall (E : XmlableExpression) :
-  XmlableSubroutineCall = struct
+and XmlableSubroutineCall : (Xmlable with type t := Term.subroutine_call) =
+struct
   let write (t : Term.subroutine_call) oc =
     (match t.target with
     | None -> ()
@@ -167,24 +151,11 @@ module MakeXmlableSubroutineCall (E : XmlableExpression) :
         fprintf oc "<symbol> . </symbol>\n");
     XmlableIdentifier.write t.subroutine_name oc;
     fprintf oc "<symbol> ( </symbol>\n";
-    fprintf oc "<expressionList>\n";
-    let rec write_arguments = function
-      | [] -> ()
-      | [ expr ] -> E.write expr oc
-      | expr :: arguments ->
-          E.write expr oc;
-          fprintf oc "<symbol> , </symbol>\n";
-          write_arguments arguments
-    in
-    write_arguments t.arguments;
-    fprintf oc "</expressionList>\n";
+    XmlableExpressionList.write t.arguments oc;
     fprintf oc "<symbol> ) </symbol>\n"
 end
 
-module MakeXmlableStatement
-    (E : XmlableExpression)
-    (S : XmlableStatements)
-    (SC : XmlableSubroutineCall) : XmlableStatement = struct
+and XmlableStatement : (Xmlable with type t := Statement.t) = struct
   let write (t : Statement.t) oc =
     match t with
     | Let let_statement ->
@@ -195,43 +166,43 @@ module MakeXmlableStatement
         | None -> ()
         | Some index ->
             fprintf oc "<symbol> [ </symbol>\n";
-            E.write index oc;
+            XmlableExpression.write index oc;
             fprintf oc "<symbol> ] </symbol>\n");
         fprintf oc "<symbol> = </symbol>\n";
-        E.write let_statement.value oc;
+        XmlableExpression.write let_statement.value oc;
         fprintf oc "<symbol> ; </symbol>\n";
         fprintf oc "</letStatement>\n"
     | If if_statement ->
         fprintf oc "<ifStatement>\n";
         fprintf oc "<keyword> if </keyword>\n";
         fprintf oc "<symbol> ( </symbol>\n";
-        E.write if_statement.condition oc;
+        XmlableExpression.write if_statement.condition oc;
         fprintf oc "<symbol> ) </symbol>\n";
         fprintf oc "<symbol> { </symbol>\n";
-        S.write if_statement.then_statements oc;
+        XmlableStatements.write if_statement.then_statements oc;
         fprintf oc "<symbol> } </symbol>\n";
         (match if_statement.else_statements with
         | None -> ()
         | Some else_body ->
             fprintf oc "<keyword> else </keyword>\n";
             fprintf oc "<symbol> { </symbol>\n";
-            S.write else_body oc;
+            XmlableStatements.write else_body oc;
             fprintf oc "<symbol> } </symbol>\n");
         fprintf oc "</ifStatement>\n"
     | While while_statement ->
         fprintf oc "<whileStatement>\n";
         fprintf oc "<keyword> while </keyword>\n";
         fprintf oc "<symbol> ( </symbol>\n";
-        E.write while_statement.condition oc;
+        XmlableExpression.write while_statement.condition oc;
         fprintf oc "<symbol> ) </symbol>\n";
         fprintf oc "<symbol> { </symbol>\n";
-        S.write while_statement.statements oc;
+        XmlableStatements.write while_statement.statements oc;
         fprintf oc "<symbol> } </symbol>\n";
         fprintf oc "</whileStatement>\n"
     | Do do_statement ->
         fprintf oc "<doStatement>\n";
         fprintf oc "<keyword> do </keyword>\n";
-        SC.write do_statement.call oc;
+        XmlableSubroutineCall.write do_statement.call oc;
         fprintf oc "<symbol> ; </symbol>\n";
         fprintf oc "</doStatement>\n"
     | Return return_statement ->
@@ -239,25 +210,25 @@ module MakeXmlableStatement
         fprintf oc "<keyword> return </keyword>\n";
         (match return_statement.value with
         | None -> ()
-        | Some value -> E.write value oc);
+        | Some value -> XmlableExpression.write value oc);
         fprintf oc "<symbol> ; </symbol>\n";
         fprintf oc "</returnStatement>\n"
 end
 
-module rec XmlableExpressionImpl : XmlableExpression =
-  MakeXmlableExpression (XmlableTermImpl)
-
-and XmlableTermImpl : XmlableTerm = MakeXmlableTerm (XmlableExpressionImpl)
-
-and XmlableStatementsImpl : XmlableStatements =
-  MakeXmlableStatements (XmlableStatementImpl)
-
-and XmlableStatementImpl : XmlableStatement =
-  MakeXmlableStatement (XmlableExpressionImpl) (XmlableStatementsImpl)
-    (XmlableSubroutineCallImpl)
-
-and XmlableSubroutineCallImpl : XmlableSubroutineCall =
-  MakeXmlableSubroutineCall (XmlableExpressionImpl)
+and XmlableExpressionList : (Xmlable with type t := Expression.t list) = struct
+  let write (t : Expression.t list) oc =
+    fprintf oc "<expressionList>\n";
+    let rec write_expressions = function
+      | [] -> ()
+      | [ expr ] -> XmlableExpression.write expr oc
+      | expr :: expressions ->
+          XmlableExpression.write expr oc;
+          fprintf oc "<symbol> , </symbol>\n";
+          write_expressions expressions
+    in
+    write_expressions t;
+    fprintf oc "</expressionList>\n"
+end
 
 module XmlableVarDec : Xmlable with type t := Subroutine.var_dec = struct
   let write (t : Subroutine.var_dec) oc =
@@ -280,7 +251,7 @@ module XmlableSubroutineBody : Xmlable with type t := Subroutine.body = struct
         XmlableIdentifierList.write var.names oc;
         fprintf oc "<symbol> ; </symbol>\n";
         fprintf oc "</varDec>\n");
-    XmlableStatementsImpl.write t.statements oc;
+    XmlableStatements.write t.statements oc;
     fprintf oc "<symbol> } </symbol>\n";
     fprintf oc "</subroutineBody>\n"
 end
