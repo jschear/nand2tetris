@@ -1,9 +1,10 @@
 open Ast
 open Core
 
-(* TODO: try out xmlm? *)
-
-(* TODO: factor out expressionList *)
+(* TODO: Try out ppx_protocol_conv instead of handwriting these?
+   - Add [@@deriving ...] to the AST types
+   - Shadow the conversion functions to add the extra tokens nand2tetris wants
+*)
 
 module type Xmlable = sig
   type t
