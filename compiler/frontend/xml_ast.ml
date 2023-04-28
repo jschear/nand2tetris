@@ -1,10 +1,12 @@
+(* Modules for serializing the AST to XML in the format nand2tetris desires.
+
+   TODO: Try out ppx_protocol_conv instead of handwriting these?
+       - Add [@@deriving ...] to the AST types
+       - Shadow the conversion functions to add the extra tokens nand2tetris wants
+*)
+
 open Ast
 open Core
-
-(* TODO: Try out ppx_protocol_conv instead of handwriting these?
-   - Add [@@deriving ...] to the AST types
-   - Shadow the conversion functions to add the extra tokens nand2tetris wants
-*)
 
 module type Xmlable = sig
   type t

@@ -1,3 +1,5 @@
+(* A lexer specification for the Jack language. A lexer is generated from this file using ocamllex. *)
+
 {
 open Lexing
 open Parser

@@ -1,3 +1,5 @@
+(* Utility functions for serializing tokens to XML in the format nand2tetris desires. *)
+
 open Parser
 open Core
 
@@ -61,8 +63,8 @@ let string_of_token = function
   | BOOLEAN -> "boolean"
   | AMPERSAND -> "&"
 
-(* Wraps a lexer function, fn, writing each token to an output stream in XML format. *)
-let wrap_lexer_xml fn oc : Lexing.lexbuf -> Parser.token =
+(* Wraps a lexer function (fn) writing each token to an output stream (oc) in XML format. *)
+let wrap_lexer fn oc : Lexing.lexbuf -> Parser.token =
   fprintf oc "<tokens>\n";
 
   let wrapped lexbuf =

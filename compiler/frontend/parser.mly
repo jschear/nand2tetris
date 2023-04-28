@@ -1,3 +1,5 @@
+(* A parser specification for the Jack language. A parser is generated from this file using mehnir. *)
+
 %token CLASS
 %token CONSTRUCTOR FUNCTION METHOD
 %token FIELD

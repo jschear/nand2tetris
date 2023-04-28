@@ -1,7 +1,7 @@
 (library
  (name frontend)
  (libraries core)
- (modules parser lexer ast token_utils xml_ast)
+ (modules parser lexer ast xml_tokens xml_ast)
  (preprocess
   (pps ppx_jane)))
 

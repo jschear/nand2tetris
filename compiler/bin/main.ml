@@ -65,7 +65,7 @@ let compile_file filename ~emit_tokens ~emit_ast =
       let tokens_oc = maybe_open_channel output_files.tokens_file in
       let lexer =
         match tokens_oc with
-        | Some oc -> Token_utils.wrap_lexer_xml Lexer.read_token oc
+        | Some oc -> Xml_tokens.wrap_lexer Lexer.read_token oc
         | None -> Lexer.read_token
       in
       let ast = parse lexer lexbuf in
