@@ -1,5 +1,6 @@
-(library
- (name frontend_handwritten)
- (libraries core)
+(executable
+ (public_name handwritten_lexer)
+ (name main)
+ (libraries core stdio core_unix.command_unix str)
  (preprocess
   (pps ppx_jane)))
